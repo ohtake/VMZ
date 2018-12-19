@@ -77,7 +77,7 @@ def create_video_db(
                     with open(file_name, mode='rb') as file:
                         video_data = file.read()
                 else:
-                    video_data = file_name
+                    video_data = str.encode(file_name)
 
                 tensor_protos = caffe2_pb2.TensorProtos()
                 video_tensor = tensor_protos.protos.add()
