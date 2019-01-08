@@ -407,11 +407,38 @@ labels= (
 )
 
 output = pickle.load(open('../my_features.pkl', 'rb'))
-print 'Shape: ', output['softmax'].shape
+print 'Shape of softmax: ', output['softmax'].shape
+print 'Shape of final_avg: ', output['final_avg'].shape
+
+print ""
+print "Video IDs:", output['video_id']
 
 transposed = output['softmax'].transpose()
-scores = [(i, sum(transposed[i]) / len(transposed[i])) for i in range(transposed.shape[0])]
-highest = sorted(scores, key=lambda s: s[1], reverse=True)
 
-for i in range(10):
-    print labels[highest[i][0]], highest[i][1]
+with open('../my_features_softmax.csv', 'w') as raw_csv:
+    raw_csv.write('label')
+    for i in range(len(output['video_id'])):
+        raw_csv.write(',')
+        raw_csv.write('s' + str(output['video_id'][i]))
+    raw_csv.write('\n')
+    for i in range(transposed.shape[0]):
+        raw_csv.write(labels[i])
+        for j in range(transposed.shape[1]):
+            raw_csv.write(',')
+            raw_csv.write(str(transposed[i][j]))
+        raw_csv.write('\n')
+
+def print_scores(section, scores):
+    highest = sorted(scores, key=lambda s: s[1], reverse=True)
+    print ""
+    print section
+    for i in range(10):
+        print labels[highest[i][0]], highest[i][1]
+
+for j in range(transposed.shape[1]):
+    id = output['video_id'][j]
+    scores = [(i, transposed[i][j]) for i in range(transposed.shape[0])]
+    print_scores('Segment ' + str(id), scores)
+
+scores = [(i, sum(transposed[i]) / len(transposed[i])) for i in range(transposed.shape[0])]
+print_scores('Average', scores)
