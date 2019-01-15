@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import sys
 import pickle
+import numpy
+import subprocess
 
 # Knetics-400 https://deepmind.com/research/open-source/open-source-datasets/kinetics/
 labels= (
@@ -413,6 +416,7 @@ print 'Shape of final_avg: ', output['final_avg'].shape
 print ""
 print "Video IDs:", output['video_id']
 
+softmax = output['softmax']
 transposed = output['softmax'].transpose()
 
 with open('../my_features_softmax.csv', 'w') as raw_csv:
@@ -427,6 +431,32 @@ with open('../my_features_softmax.csv', 'w') as raw_csv:
             raw_csv.write(',')
             raw_csv.write(str(transposed[i][j]))
         raw_csv.write('\n')
+
+def to_srt_time(sec):
+    sec2 = sec % 60
+    min = int(sec) // 60
+    hour = int(sec) // (60 * 60)
+    return ('%02d:%02d:%06.3f' % (hour, min, sec2)).replace('.', ',')
+
+with open('../my_features_softmax.srt', 'w') as srt:
+    seconds = float(subprocess.check_output("ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=nokey=1:noprint_wrappers=1 " + sys.argv[1], shell=True))
+    fragments = numpy.amax(output['video_id'])
+    for fragment in range(fragments):
+        index = numpy.where(output['video_id'] == fragment+1)[0][0]
+        start = seconds / fragments * fragment
+        end = seconds / fragments * (fragment + 1)
+        srt.write(str(fragment + 1))
+        srt.write('\n')
+        srt.write(to_srt_time(start))
+        srt.write(' --> ')
+        srt.write(to_srt_time(end))
+        srt.write('\n')
+        scores = [(j, softmax[index][j]) for j in range(softmax.shape[1])]
+        highest = sorted(scores, key=lambda s: s[1], reverse=True)
+        for j in range(5):
+            srt.write('%s (%2.2f)' % (labels[highest[j][0]], highest[j][1]))
+            srt.write('\n')
+        srt.write('\n')
 
 def print_scores(section, scores):
     highest = sorted(scores, key=lambda s: s[1], reverse=True)
