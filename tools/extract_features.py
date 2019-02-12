@@ -199,40 +199,43 @@ def ExtractFeatures(args):
             examples_per_iteration = args.batch_size
         num_iterations = int(num_examples / examples_per_iteration)
 
-    activations = fetchActivations(model, outputs, num_iterations)
+    while True:
+        raw_input("Press enter if you place a video file:")
 
-    # saving extracted features
-    for index in range(len(outputs)):
-        log.info(
-            "Read '{}' with shape {}".format(
-                outputs[index],
-                activations[outputs[index]].shape
+        activations = fetchActivations(model, outputs, num_iterations)
+
+        # saving extracted features
+        for index in range(len(outputs)):
+            log.info(
+                "Read '{}' with shape {}".format(
+                    outputs[index],
+                    activations[outputs[index]].shape
+                )
             )
-        )
 
-    if args.output_path:
-        output_path = args.output_path
-    else:
-        output_path = os.path.dirname(args.test_data) + '/features.pickle'
+        if args.output_path:
+            output_path = args.output_path
+        else:
+            output_path = os.path.dirname(args.test_data) + '/features.pickle'
 
-    log.info('Writing to {}'.format(output_path))
-    with open(output_path, 'wb') as handle:
-        pickle.dump(activations, handle)
+        log.info('Writing to {}'.format(output_path))
+        with open(output_path, 'wb') as handle:
+            pickle.dump(activations, handle)
 
-    # perform sanity check
-    if args.sanity_check == 1:  # check clip accuracy
-        clip_acc = 0
-        softmax = activations['softmax']
-        label = activations['label']
-        for i in range(len(softmax)):
-            sorted_preds = \
-                np.argsort(softmax[i])
-            sorted_preds[:] = sorted_preds[::-1]
-            if sorted_preds[0] == label[i]:
-                clip_acc += 1
-        log.info('Sanity check --- clip accuracy: {}'.format(
-            clip_acc / len(softmax))
-        )
+        # perform sanity check
+        if args.sanity_check == 1:  # check clip accuracy
+            clip_acc = 0
+            softmax = activations['softmax']
+            label = activations['label']
+            for i in range(len(softmax)):
+                sorted_preds = \
+                    np.argsort(softmax[i])
+                sorted_preds[:] = sorted_preds[::-1]
+                if sorted_preds[0] == label[i]:
+                    clip_acc += 1
+            log.info('Sanity check --- clip accuracy: {}'.format(
+                clip_acc / len(softmax))
+            )
 
 
 def main():
