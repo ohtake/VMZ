@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os/exec"
+	"path"
+	"strings"
 )
 
 type VideoAnalyzer struct {
@@ -71,10 +74,25 @@ func (a *VideoAnalyzer) PrepareVMZ() error {
 
 func (a *VideoAnalyzer) Next() error {
 	filename := <-a.inputCh
-	fmt.Println(filename)
-	// TODO prepare VMZ (how?)
-	// TODO scp mp4 to GPU server
-	// TODO run VMZ (how?)
-	// TODO scp srt from GPU server
+	log.Println("Sending", filename)
+	scpMovieCmd := exec.Command("scp", path.Join(a.inputDirectory, filename), fmt.Sprintf("%s@%s:tx2test.mp4", a.sshUser, a.sshHost))
+	err := scpMovieCmd.Run()
+	if err != nil {
+		return err
+	}
+	// TODO run VMZ
+	log.Println("Running VMZ on", filename)
+	log.Println("Generating SRT for", filename)
+	outputCmd := exec.Command("ssh", fmt.Sprintf("%s@%s", a.sshUser, a.sshHost), ". /etc/profile && cd VMZ && . demo-0-initialize.sh && ./demo-2-output.py ../tx2test.mp4")
+	err = outputCmd.Run()
+	if err != nil {
+		return err
+	}
+	log.Println("Receiving SRT", filename)
+	scpSubtitleCmd := exec.Command("scp", fmt.Sprintf("%s@%s:my_features_softmax.srt", a.sshUser, a.sshHost), path.Join(a.outputDirectory, strings.TrimSuffix(filename, path.Ext(filename))+".srt"))
+	err = scpSubtitleCmd.Run()
+	if err != nil {
+		return err
+	}
 	return nil
 }
