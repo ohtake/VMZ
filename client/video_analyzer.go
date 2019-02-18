@@ -54,9 +54,16 @@ func (a *VideoAnalyzer) PrepareVMZ() error {
 		return err
 	}
 	a.cmdVmzOutReader = bufio.NewReader(a.cmdVmzOut)
+	err = a.waitVmzReady()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *VideoAnalyzer) waitVmzReady() error {
 	for {
-		var line []byte
-		line, _, err = a.cmdVmzOutReader.ReadLine()
+		line, _, err := a.cmdVmzOutReader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				stderrStr, _ := ioutil.ReadAll(a.cmdVmzErr)
@@ -65,10 +72,10 @@ func (a *VideoAnalyzer) PrepareVMZ() error {
 			return err
 		}
 		lineStr := string(line)
-		if lineStr == "Press enter if you place a video file:" {
+		// log.Println(lineStr)
+		if lineStr == "EXTRACT-FEATURES-READY-MARKER" {
 			return nil
 		}
-		// log.Println(lineStr)
 	}
 }
 
@@ -80,19 +87,38 @@ func (a *VideoAnalyzer) Next() error {
 	if err != nil {
 		return err
 	}
-	// TODO run VMZ
+
 	log.Println("Running VMZ on", filename)
+	_, err = a.cmdVmzIn.Write([]byte("\n"))
+	if err != nil {
+		return err
+	}
+	err = a.waitVmzReady()
+	if err != nil {
+		return err
+	}
+
 	log.Println("Generating SRT for", filename)
 	outputCmd := exec.Command("ssh", fmt.Sprintf("%s@%s", a.sshUser, a.sshHost), ". /etc/profile && cd VMZ && . demo-0-initialize.sh && ./demo-2-output.py ../tx2test.mp4")
 	err = outputCmd.Run()
 	if err != nil {
 		return err
 	}
+
 	log.Println("Receiving SRT", filename)
-	scpSubtitleCmd := exec.Command("scp", fmt.Sprintf("%s@%s:my_features_softmax.srt", a.sshUser, a.sshHost), path.Join(a.outputDirectory, strings.TrimSuffix(filename, path.Ext(filename))+".srt"))
+	subtitlePath := path.Join(a.outputDirectory, strings.TrimSuffix(filename, path.Ext(filename))+".srt")
+	scpSubtitleCmd := exec.Command("scp", fmt.Sprintf("%s@%s:my_features_softmax.srt", a.sshUser, a.sshHost), subtitlePath)
 	err = scpSubtitleCmd.Run()
 	if err != nil {
 		return err
 	}
+
+	log.Println("Burning substile", filename)
+	ffmpegSubtitleCmd := exec.Command("ffmpeg", "-i", path.Join(a.inputDirectory, filename), "-vf", fmt.Sprintf("subtitles=%s", subtitlePath), path.Join(a.outputDirectory, filename))
+	err = ffmpegSubtitleCmd.Run()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

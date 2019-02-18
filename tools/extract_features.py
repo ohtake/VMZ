@@ -200,6 +200,8 @@ def ExtractFeatures(args):
         num_iterations = int(num_examples / examples_per_iteration)
 
     while True:
+        print("EXTRACT-FEATURES-READY-MARKER")
+        sys.stdout.flush()
         raw_input("Press enter if you place a video file:")
 
         activations = fetchActivations(model, outputs, num_iterations)
