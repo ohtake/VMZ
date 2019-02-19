@@ -35,6 +35,7 @@ func NewVideoAnalyzer(sshUser string, sshHost string, inputDirectory string, out
 }
 
 func (a *VideoAnalyzer) PrepareVMZ() error {
+	log.Println("Preparing VMZ")
 	a.cmdVmz = exec.Command("ssh", fmt.Sprintf("%s@%s", a.sshUser, a.sshHost), ". /etc/profile && cd VMZ && . demo-0-initialize.sh && ./demo-1-analyze.sh ../tx2test.mp4")
 	var err error
 	a.cmdVmzIn, err = a.cmdVmz.StdinPipe()
@@ -58,6 +59,7 @@ func (a *VideoAnalyzer) PrepareVMZ() error {
 	if err != nil {
 		return err
 	}
+	log.Println("VMZ ready")
 	return nil
 }
 
