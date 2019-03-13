@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -18,6 +19,7 @@ type VideoAnalyzer struct {
 	inputDirectory  string
 	outputDirectory string
 	inputCh         chan string
+	analyzedCh      chan string
 	cmdVmz          *exec.Cmd
 	cmdVmzIn        io.WriteCloser
 	cmdVmzOut       io.ReadCloser
@@ -25,7 +27,7 @@ type VideoAnalyzer struct {
 	cmdVmzErr       io.ReadCloser
 }
 
-func NewVideoAnalyzer(sshUser string, sshHost string, inputDirectory string, outputDirectory string, inputCh chan string) *VideoAnalyzer {
+func NewVideoAnalyzer(sshUser string, sshHost string, inputDirectory string, outputDirectory string, inputCh chan string, analyzedCh chan string) *VideoAnalyzer {
 	return &VideoAnalyzer{
 		active:          true,
 		sshUser:         sshUser,
@@ -33,15 +35,17 @@ func NewVideoAnalyzer(sshUser string, sshHost string, inputDirectory string, out
 		inputDirectory:  inputDirectory,
 		outputDirectory: outputDirectory,
 		inputCh:         inputCh,
+		analyzedCh:      analyzedCh,
 	}
 }
 
-func NewVideoAnalyzerFake(inputDirectory string, outputDirectory string, inputCh chan string) *VideoAnalyzer {
+func NewVideoAnalyzerFake(inputDirectory string, outputDirectory string, inputCh chan string, analyzedCh chan string) *VideoAnalyzer {
 	return &VideoAnalyzer{
 		active:          false,
 		inputDirectory:  inputDirectory,
 		outputDirectory: outputDirectory,
 		inputCh:         inputCh,
+		analyzedCh:      analyzedCh,
 	}
 }
 
@@ -95,6 +99,12 @@ func (a *VideoAnalyzer) waitVmzReady() error {
 func (a *VideoAnalyzer) Next() error {
 	filename := <-a.inputCh
 
+	if _, err := os.Stat(path.Join(a.outputDirectory, filename)); err == nil {
+		log.Println("Analyzed already:", filename)
+		a.analyzedCh <- filename
+		return nil
+	}
+
 	if !a.active {
 		log.Println("Inactive analyzer ignores:", filename)
 		return nil
@@ -139,5 +149,6 @@ func (a *VideoAnalyzer) Next() error {
 		return err
 	}
 
+	a.analyzedCh <- filename
 	return nil
 }

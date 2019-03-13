@@ -24,6 +24,7 @@ func main() {
 	fmt.Printf("%s (%d sec) -> %s\n", *inputVideoPath, *watchInterval, *outputVideoPath)
 
 	inputCh := make(chan string, 10)
+	analyzedCh := make(chan string, 10)
 
 	go func() {
 		inputWatcher := NewInputWatcher(*inputVideoPath, inputCh)
@@ -39,9 +40,9 @@ func main() {
 	var videoAnalyzer *VideoAnalyzer
 	if *sshUser == "" || *sshHost == "" {
 		log.Println("SSH is not configured. Disabling analyzer.")
-		videoAnalyzer = NewVideoAnalyzerFake(*inputVideoPath, *outputVideoPath, inputCh)
+		videoAnalyzer = NewVideoAnalyzerFake(*inputVideoPath, *outputVideoPath, inputCh, analyzedCh)
 	} else {
-		videoAnalyzer = NewVideoAnalyzer(*sshUser, *sshHost, *inputVideoPath, *outputVideoPath, inputCh)
+		videoAnalyzer = NewVideoAnalyzer(*sshUser, *sshHost, *inputVideoPath, *outputVideoPath, inputCh, analyzedCh)
 		err := videoAnalyzer.PrepareVMZ()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "failure to prepare VMZ")
@@ -60,5 +61,11 @@ func main() {
 		}
 	}()
 
-	select {}
+	webServer := NewWebServer(8080, *inputVideoPath, *outputVideoPath, analyzedCh)
+	go func() {
+		for {
+			webServer.AddAnalyzed()
+		}
+	}()
+	webServer.Serve()
 }
