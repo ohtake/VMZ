@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"time"
 )
@@ -15,7 +16,7 @@ func main() {
 	sshHost := flag.String("ssh-host", "", "host name for ssh connection to VMZ host")
 	help := flag.Bool("help", false, "Print help")
 	flag.Parse()
-	if *help || *sshUser == "" || *sshHost == "" {
+	if *help {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -23,13 +24,7 @@ func main() {
 	fmt.Printf("%s (%d sec) -> %s\n", *inputVideoPath, *watchInterval, *outputVideoPath)
 
 	inputCh := make(chan string, 10)
-	videoAnalyzer := NewVideoAnalyzer(*sshUser, *sshHost, *inputVideoPath, *outputVideoPath, inputCh)
-	err := videoAnalyzer.PrepareVMZ()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "failure to prepare VMZ")
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
-	}
+
 	go func() {
 		inputWatcher := NewInputWatcher(*inputVideoPath, inputCh)
 		for {
@@ -41,6 +36,20 @@ func main() {
 		}
 	}()
 
+	var videoAnalyzer *VideoAnalyzer
+	if *sshUser == "" || *sshHost == "" {
+		log.Println("SSH is not configured. Disabling analyzer.")
+		videoAnalyzer = NewVideoAnalyzerFake(*inputVideoPath, *outputVideoPath, inputCh)
+	} else {
+		videoAnalyzer = NewVideoAnalyzer(*sshUser, *sshHost, *inputVideoPath, *outputVideoPath, inputCh)
+		err := videoAnalyzer.PrepareVMZ()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "failure to prepare VMZ")
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+	}
+
 	go func() {
 		for {
 			err := videoAnalyzer.Next()
@@ -50,5 +59,6 @@ func main() {
 			}
 		}
 	}()
+
 	select {}
 }

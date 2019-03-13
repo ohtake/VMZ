@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"path"
 	"sort"
 	"strings"
@@ -43,6 +44,9 @@ func (w *InputWatcher) Check() error {
 	sort.Strings(newFiles)
 	// Skip latest file because it may not be finised
 	newFiles = newFiles[:len(newFiles)-1]
+	if len(newFiles) > 0 {
+		log.Println("Found input:", newFiles)
+	}
 	for _, filename := range newFiles {
 		w.inputCh <- filename
 	}

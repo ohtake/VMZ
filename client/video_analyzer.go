@@ -12,6 +12,7 @@ import (
 )
 
 type VideoAnalyzer struct {
+	active          bool
 	sshHost         string
 	sshUser         string
 	inputDirectory  string
@@ -26,8 +27,18 @@ type VideoAnalyzer struct {
 
 func NewVideoAnalyzer(sshUser string, sshHost string, inputDirectory string, outputDirectory string, inputCh chan string) *VideoAnalyzer {
 	return &VideoAnalyzer{
+		active:          true,
 		sshUser:         sshUser,
 		sshHost:         sshHost,
+		inputDirectory:  inputDirectory,
+		outputDirectory: outputDirectory,
+		inputCh:         inputCh,
+	}
+}
+
+func NewVideoAnalyzerFake(inputDirectory string, outputDirectory string, inputCh chan string) *VideoAnalyzer {
+	return &VideoAnalyzer{
+		active:          false,
 		inputDirectory:  inputDirectory,
 		outputDirectory: outputDirectory,
 		inputCh:         inputCh,
@@ -83,6 +94,12 @@ func (a *VideoAnalyzer) waitVmzReady() error {
 
 func (a *VideoAnalyzer) Next() error {
 	filename := <-a.inputCh
+
+	if !a.active {
+		log.Println("Inactive analyzer ignores:", filename)
+		return nil
+	}
+
 	log.Println("Sending", filename)
 	scpMovieCmd := exec.Command("scp", path.Join(a.inputDirectory, filename), fmt.Sprintf("%s@%s:tx2test.mp4", a.sshUser, a.sshHost))
 	err := scpMovieCmd.Run()
