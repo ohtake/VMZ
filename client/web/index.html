@@ -1,1 +1,52 @@
-Hello
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Action recognition</title>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="player.js"></script>
+  <style type="text/css">
+  #actions div {
+    margin: 0.5em 1em;
+    padding: 0.2em 0;
+    background-color: lightblue;
+    color: black;
+    white-space: nowrap;
+  }
+  #actions div.suspicious {
+    background-color: pink;
+  }
+  #actions div span {
+    margin: 0 0.2em;
+  }
+  #actions div.suspicious span {
+    font-weight: bold;
+  }
+  #timeline .bar {
+    fill: pink;
+  }
+  #timeline .current {
+    fill: black;
+  }
+  </style>
+</head>
+<body>
+  <h1>Action recognition</h1>
+  <div>
+    <video width="480" height="360" controls id="video" style="float: left;">
+      <source src="./video?id=0" type="video/mp4">
+    </video>
+    <div style="float: left;">
+      <h2>Recognized actions</h2>
+      <div id="actions">
+      </div>
+    </div>
+  </div>
+  <div style="clear: both;"></div>
+  <div style="margin-top: 1em;">
+    <h2>Possibilities of suspicious actions</h2>
+    <div id="timeline" >
+    </div>
+  </div>
+</body>
+</html>

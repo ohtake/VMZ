@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path"
 )
 
 const staticRoot = "web/"
@@ -51,7 +54,13 @@ func (h videoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, "Video filename: ", h.s.filenames[id])
+	tsFile, err := os.Open(path.Join(h.s.inputDirectory, h.s.filenames[id]))
+	if err != nil {
+		w.WriteHeader(500)
+		fmt.Fprint(w, err)
+	}
+	defer tsFile.Close()
+	io.Copy(w, tsFile) // TODO handle error
 }
 
 func (s *WebServer) Serve() {
