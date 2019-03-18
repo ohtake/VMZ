@@ -33,9 +33,14 @@
 <body>
   <h1>Action recognition</h1>
   <div>
-    <video width="480" height="360" controls id="video" style="float: left;">
-      <source src="./video?id=0" type="video/mp4">
-    </video>
+    <div style="float: left;">
+      <video width="480" height="360" controls preload="auto" id="videoEven" >
+        <source src="./video?id=0" type="video/mp4">
+      </video>
+      <video width="480" height="360" controls preload="auto" id="videoOdd" style="display: none;">
+        <source src="./video?id=1" type="video/mp4">
+      </video>
+    </div>
     <div style="float: left;">
       <h2>Recognized actions</h2>
       <div id="actions">

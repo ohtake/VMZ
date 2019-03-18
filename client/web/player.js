@@ -2,7 +2,13 @@ const secsPerFragment = 10;
 let videoId = 0;
 
 function getVideoElement() {
-    return document.getElementById("video");
+    const id = (videoId % 2 === 0) ? "videoEven" : "videoOdd";
+    return document.getElementById(id);
+}
+
+function getPreloadVideoElement() {
+    const id = (videoId % 2 === 1) ? "videoEven" : "videoOdd";
+    return document.getElementById(id);
 }
 
 function getCurrentSec() {
@@ -14,8 +20,11 @@ function getCurrentSec() {
 function playNext() {
     videoId++;
     const eVideo = getVideoElement();
-    eVideo.setAttribute("src", "./video?id=" + videoId);
     eVideo.play();
+    eVideo.style.display = "";
+    const eVideoPreload = getPreloadVideoElement();
+    eVideoPreload.setAttribute("src", "./video?id=" + (videoId + 1));
+    eVideoPreload.style.display = "none";
 }
 
 function updateActions() {
@@ -102,12 +111,13 @@ function updateTimelineCurrent() {
 }
 
 window.addEventListener("load", function(ev) {
-    const eVideo = getVideoElement();
-    eVideo.addEventListener("timeupdate", (evUpdate)=> {
-        updateTimelineCurrent();
-        updateActions();
+    [getVideoElement(), getPreloadVideoElement()].forEach((v) => {
+        v.addEventListener("timeupdate", (evUpdate)=> {
+            updateTimelineCurrent();
+            updateActions();
+        });
+        v.addEventListener("ended", playNext);
     });
-    eVideo.addEventListener("ended", playNext);
 
     // TODO
     updateActions();
