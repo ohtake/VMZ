@@ -1,6 +1,9 @@
 const secsPerFragment = 10;
 let videoId = 0;
 
+let jumpRequested = false;
+let jumpSec = 0;
+
 function getVideoElement() {
     const id = (videoId % 2 === 0) ? "videoEven" : "videoOdd";
     return document.getElementById(id);
@@ -25,6 +28,37 @@ function playNext() {
     const eVideoPreload = getPreloadVideoElement();
     eVideoPreload.setAttribute("src", "./video?id=" + (videoId + 1));
     eVideoPreload.style.display = "none";
+}
+
+function jumpToHandler(ev) {
+    if (!jumpRequested) return;
+     if (this === getVideoElement()) {
+        jumpRequested = false;
+        // TODO Cannot seek in Chrome. https://stackoverflow.com/questions/8088364/html5-video-will-not-loop/9549404#9549404
+        this.currentTime = jumpSec;
+        this.play();
+    }
+}
+
+function jumpTo(sec) {
+    const id = Math.floor(sec / secsPerFragment);
+    const secInFragment = sec % secsPerFragment;
+
+    jumpSec = secInFragment;
+    jumpRequested = true;
+    if (videoId !== id) {
+        videoId = id;
+        const eVideoPreload = getPreloadVideoElement();
+        eVideoPreload.pause();
+        eVideoPreload.style.display = "none";
+        const eVideo = getVideoElement();
+        eVideo.setAttribute("src", "./video?id=" + videoId);
+        eVideo.style.display = "";
+        eVideoPreload.setAttribute("src", "./video?id=" + (videoId + 1));
+    } else {
+        // Did not modify video elements. We have to call the envet handler manually.
+        jumpToHandler.call(getVideoElement());
+    }
 }
 
 function updateActions() {
@@ -60,6 +94,14 @@ function initTimeline() {
     svg.append("g").attr("class", "marker").attr("transform", "translate(30, 10)");
     svg.append("g").attr("class", "axisX").attr("transform", "translate(30, 310)");
     svg.append("g").attr("transform", "translate(30, 10)").call(d3.axisLeft(tlScaleY));
+    svg.on("click", function() {
+        let pos = d3.mouse(this);
+        let posX = pos[0];
+        let posY = pos[1];
+        // Cannot invert?
+        let sec = (posX - 30) / tlScaleX.step();
+        if (sec >= 0) jumpTo(sec);
+    })
 }
 
 function updateTimeline() {
@@ -117,6 +159,7 @@ window.addEventListener("load", function(ev) {
             updateActions();
         });
         v.addEventListener("ended", playNext);
+        v.addEventListener("canplay", jumpToHandler);
     });
 
     // TODO
