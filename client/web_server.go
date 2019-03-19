@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path"
@@ -60,7 +59,12 @@ func (h videoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err)
 	}
 	defer tsFile.Close()
-	io.Copy(w, tsFile) // TODO handle error
+	stat, err := tsFile.Stat()
+	if err != nil {
+		w.WriteHeader(500)
+		fmt.Fprint(w, err)
+	}
+	http.ServeContent(w, r, tsFile.Name(), stat.ModTime(), tsFile)
 }
 
 func (s *WebServer) Serve() {

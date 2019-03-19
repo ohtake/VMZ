@@ -34,7 +34,6 @@ function jumpToHandler(ev) {
     if (!jumpRequested) return;
      if (this === getVideoElement()) {
         jumpRequested = false;
-        // TODO Cannot seek in Chrome. https://stackoverflow.com/questions/8088364/html5-video-will-not-loop/9549404#9549404
         this.currentTime = jumpSec;
         this.play();
     }
