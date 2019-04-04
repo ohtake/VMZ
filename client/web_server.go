@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 const staticRoot = "web/"
@@ -31,11 +32,13 @@ func (s *WebServer) AddAnalyzed() {
 	s.filenames = append(s.filenames, filename)
 }
 
-type videoHandler struct {
-	s *WebServer
+type contentHandler struct {
+	s   *WebServer
+	dir string
+	ext string
 }
 
-func (h videoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h contentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var id int
 	if _, err := fmt.Sscan(r.URL.Query().Get("id"), &id); err != nil {
 		w.WriteHeader(400)
@@ -53,22 +56,25 @@ func (h videoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tsFile, err := os.Open(path.Join(h.s.inputDirectory, h.s.filenames[id]))
+	contentFileName := strings.TrimSuffix(h.s.filenames[id], path.Ext(h.s.filenames[id])) + "." + h.ext
+	contentFilePath := path.Join(h.dir, contentFileName)
+	contentFile, err := os.Open(contentFilePath)
 	if err != nil {
 		w.WriteHeader(500)
 		fmt.Fprint(w, err)
 	}
-	defer tsFile.Close()
-	stat, err := tsFile.Stat()
+	defer contentFile.Close()
+	stat, err := contentFile.Stat()
 	if err != nil {
 		w.WriteHeader(500)
 		fmt.Fprint(w, err)
 	}
-	http.ServeContent(w, r, tsFile.Name(), stat.ModTime(), tsFile)
+	http.ServeContent(w, r, contentFile.Name(), stat.ModTime(), contentFile)
 }
 
 func (s *WebServer) Serve() {
-	http.Handle("/video", videoHandler{s: s})
+	http.Handle("/video", contentHandler{s: s, dir: s.inputDirectory, ext: "mp4"})
+	http.Handle("/actions", contentHandler{s: s, dir: s.outputDirectory, ext: "csv"})
 	http.Handle("/", http.FileServer(http.Dir("web")))
 	http.ListenAndServe(fmt.Sprintf(":%d", s.port), nil)
 }
