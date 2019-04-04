@@ -134,6 +134,14 @@ func (a *VideoAnalyzer) Next() error {
 		return err
 	}
 
+	log.Println("Receiving CSV", filename)
+	csvPath := path.Join(a.outputDirectory, strings.TrimSuffix(filename, path.Ext(filename))+".csv")
+	scpCsvCmd := exec.Command("scp", fmt.Sprintf("%s@%s:my_features_softmax.csv", a.sshUser, a.sshHost), csvPath)
+	err = scpCsvCmd.Run()
+	if err != nil {
+		return err
+	}
+
 	log.Println("Receiving SRT", filename)
 	subtitlePath := path.Join(a.outputDirectory, strings.TrimSuffix(filename, path.Ext(filename))+".srt")
 	scpSubtitleCmd := exec.Command("scp", fmt.Sprintf("%s@%s:my_features_softmax.srt", a.sshUser, a.sshHost), subtitlePath)
