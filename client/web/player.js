@@ -4,6 +4,14 @@ let videoId = 0;
 let jumpRequested = false;
 let jumpSec = 0;
 
+let csvId = 0;
+let actions = [];
+
+const suspiciousActions = new Set([
+    "using computer",
+    "stretching arm",
+]);
+
 function getVideoElement() {
     const id = (videoId % 2 === 0) ? "videoEven" : "videoOdd";
     return document.getElementById(id);
@@ -63,21 +71,9 @@ function jumpTo(sec) {
 function updateActions() {
     const currentSec = getCurrentSec();
     let scale = d3.scaleLinear().domain([0, 1]).range([0, 500]);
-    const data1 = [
-        ["action 1", 0.6, false],
-        ["action 2", 0.2, false],
-        ["action 3", 0.05, false],
-        ["action 4", 0.03, false],
-        ["action 5", 0.01, false],
-    ];
-    const data2 = [
-        ["suspicious action 1", 0.5, true],
-        ["action 2", 0.2, false],
-        ["suspicious action 3", 0.1, true],
-        ["action 4", 0.05, false],
-        ["action 5", 0.03, false],
-    ];
-    const data = (currentSec % 2 === 0) ? data1 : data2;
+    const arr = Array.from(actions[currentSec], e => [e[0], e[1], suspiciousActions.has(e[0])]);
+    arr.sort((a, b) => b[1] - a[1]);
+    const data = arr.slice(0, 5);
     d3.select("#actions").selectAll("div").remove().exit().data(data).enter().append("div")
         .style("width", d => scale(d[1]) + "px")
         .attr("class", d => d[2] ? "suspicious" : "")
@@ -104,28 +100,15 @@ function initTimeline() {
 }
 
 function updateTimeline() {
-    let data = [
-        [0, 0.01],
-        [1, 0.02],
-        [2, 0.03],
-        [3, 0.50],
-        [4, 0.03],
-        [5, 0.01],
-        [6, 0.02],
-        [7, 0.80],
-        [8, 0.03],
-        [9, 0.01],
-        [10, 0.01],
-        [11, 0.02],
-        [12, 0.03],
-        [13, 0.50],
-        [14, 0.03],
-        [15, 0.01],
-        [16, 0.02],
-        [17, 0.80],
-        [18, 0.03],
-        [19, 0.01],
-    ];
+    const ss = Array.from(suspiciousActions);
+    function suspiciousEvaluator(m) {
+        let score = 0;
+        ss.forEach(a => {
+            score += m.get(a);
+        });
+        return score;
+    }
+    let data = actions.map((m, i) => [i, suspiciousEvaluator(m)]);
     tlScaleX.domain(data.map(d => d[0]));
     const svg = d3.select("#timeline svg");
     svg.select("g.bars").selectAll("rect").remove().exit().data(data).enter().append("rect")
@@ -151,6 +134,47 @@ function updateTimelineCurrent() {
         ;
 }
 
+function parseActionCsv(content) {
+    const lines = content.split("\n");
+    const mapping = new Array(10); // column index -> time
+    lines[0].split(',').forEach((v, i) => {
+        if (i===0) return; // msut be "label"
+        mapping[i - 1] = parseInt(v.substring(1)) - 1;
+    })
+    const result = new Array(10); // time -> obj
+    for (let i = 0; i < result.length; i++) {
+        result[i] = new Map(); // label -> softmax value
+    }
+    for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        const label = cols[0];
+        for (let j = 1; j < cols.length; j++) {
+            result[mapping[j-1]].set(label, parseFloat(cols[j]));
+        }
+    }
+    return result;
+}
+
+function fetchCsv() {
+    let text = "";
+    const xhr = new XMLHttpRequest();
+    xhr.addEventListener("load", function(){
+        if (xhr.status === 200) {
+            const actions2 = parseActionCsv(xhr.responseText);
+            actions = actions.concat(actions2);
+            csvId++;
+            updateTimeline();
+            setTimeout(fetchCsv, 1000);
+        } else if (xhr.status === 404) {
+            setTimeout(fetchCsv, 5000);
+        } else {
+            console.error(xhr);
+        }
+    });
+    xhr.open("GET", "/actions?id=" + csvId);
+    xhr.send();
+}
+
 window.addEventListener("load", function(ev) {
     [getVideoElement(), getPreloadVideoElement()].forEach((v) => {
         v.addEventListener("timeupdate", (evUpdate)=> {
@@ -161,8 +185,6 @@ window.addEventListener("load", function(ev) {
         v.addEventListener("canplay", jumpToHandler);
     });
 
-    // TODO
-    updateActions();
+    fetchCsv();
     initTimeline();
-    updateTimeline();
 });
