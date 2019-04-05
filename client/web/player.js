@@ -73,7 +73,7 @@ function updateActions() {
     let scale = d3.scaleLinear().domain([0, 1]).range([0, 500]);
     const arr = Array.from(actions[currentSec], e => [e[0], e[1], suspiciousActions.has(e[0])]);
     arr.sort((a, b) => b[1] - a[1]);
-    const data = arr.slice(0, 5);
+    const data = arr.slice(0, 10);
     d3.select("#actions").selectAll("div").remove().exit().data(data).enter().append("div")
         .style("width", d => scale(d[1]) + "px")
         .attr("class", d => d[2] ? "suspicious" : "")
