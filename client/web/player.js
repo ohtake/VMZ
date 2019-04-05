@@ -134,6 +134,43 @@ function updateTimelineCurrent() {
         ;
 }
 
+function updateSuspiciousActions() {
+    const container = document.getElementById("actionSelector");
+    const inputs = container.getElementsByTagName("input");
+    const labels = Array.from(inputs).filter(e => e.checked).map(e => e.value);
+    suspiciousActions.clear();
+    labels.forEach(l => {
+        suspiciousActions.add(l);
+    });
+    updateTimeline();
+    updateActions();
+}
+
+function createActionSelector() {
+    const labels = Array.from(actions[0].keys());
+    const container = document.getElementById("actionSelector")
+    labels.forEach(l => {
+        const eLabel = document.createElement("label");
+        const eInput = document.createElement("input");
+        eInput.type = "checkbox";
+        eInput.value = l;
+        eInput.checked = suspiciousActions.has(l);
+        eInput.addEventListener("change", updateSuspiciousActions);
+        eLabel.append(eInput, l)
+        container.appendChild(eLabel);
+    })
+}
+
+function clearAllActionSelection() {
+    const container = document.getElementById("actionSelector");
+    const inputs = container.getElementsByTagName("input");
+    for (let e of inputs) {
+        e.checked = false;
+    }
+    suspiciousActions.clear();
+    updateTimeline();
+    updateActions();
+}
 function parseActionCsv(content) {
     const lines = content.split("\n");
     const mapping = new Array(10); // column index -> time
@@ -162,6 +199,9 @@ function fetchCsv() {
         if (xhr.status === 200) {
             const actions2 = parseActionCsv(xhr.responseText);
             actions = actions.concat(actions2);
+            if (csvId  === 0) {
+                createActionSelector();
+            }
             csvId++;
             updateTimeline();
             setTimeout(fetchCsv, 1000);
