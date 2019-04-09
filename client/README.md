@@ -12,11 +12,15 @@ loop video fragment
   TX2 ->> TX2: Save video fragment
   TX2 ->> Server: Send video fragment via SCP
   Server ->> Server: Run VMZ
-  Server ->> Server: Generate SRT
-  Server -->> TX2: Receive SRT
+  Server ->> Server: Generate SRT and CSV
+  Server -->> TX2: Receive SRT and CSV
   TX2 ->> TX2: Burn subtitle
 end
 ```
+
+## Web interface
+
+It listens at port 8080.
 
 ## Requirements
 
